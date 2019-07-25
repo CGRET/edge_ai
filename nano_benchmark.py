@@ -491,3 +491,5 @@ print("\nYour output file has been saved to your current working directory. Clos
 
 ### disconnect scope from network connection
 scope.Disconnect()
+
+print("\n\nExecution halted.")

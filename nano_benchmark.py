@@ -5,14 +5,12 @@
 
 # import packages
 import numpy as np
-import pandas as pd
-import scipy
+# import pandas as pd
 from scipy import stats
-import matplotlib.pyplot as plt
-import pandas
+# import matplotlib.pyplot as plt
 import random
 import paramiko
-import logging
+# import logging
 import datetime
 import sys
 import csv
@@ -36,13 +34,28 @@ To-do's / Next steps for the future:
 scope_ip = "169.254.177.210"
 device = "Jetson Nano"
 
+# Info for the devices [IP Address, username, password]
+device_info = {"Jetson Nano": ["192.168.55.1", "ubuntu", "ubuntu"],
+               "Coral Dev Board": ["192.168.55.20", "mendel", "mendel"]}
 
+
+# Creates a file to save output info
 def timestamp():
     stamp = datetime.datetime.now()
     file_name = device + stamp.strftime("%d%b%Y_%H_%M_%S") + ".txt"
     return file_name
 
 
+def line_buffered(f):
+    line_buf = ""
+    while not f.channel.exit_status_ready():
+        line_buf += str(f.read(1), 'utf-8')
+        if line_buf.endswith('\n'):
+            yield line_buf
+            line_buf = ''
+
+
+# Setup OScope
 scope = win32com.client.Dispatch("LeCroy.ActiveDSOCtrl.1")
 scope.MakeConnection("IP:" + scope_ip)
 scope.WriteString("BUZZ BEEP", True)
@@ -57,57 +70,48 @@ print("Please wait...")
 print("\n\nNow getting baseline power/performance startup speeds...\n")
 print("This will take approximately 30 seconds to complete.\n\n")
 
-# TODO: Clean up timedate file renaming
-file = timestamp()
-
+# file = timestamp()
+#
 orig_stdout = sys.stdout
-sys.stdout = open(file, "w+")
+# sys.stdout = open(file, "w+")
+
 # UNUSED ?
 # logger = logging.getLogger(__name__)
-ssh = paramiko.SSHClient()
-host = "192.168.55.1"
-user = "ubuntu"
-password = "ubuntu"
-ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-ssh.connect(host, username=user, password=password)
-channel = ssh.get_transport().open_session()
 
-t.sleep(30)
+# SSH Setup
+ssh = paramiko.SSHClient()
+ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+host_ip = device_info[device][0]
+username = device_info[device][1]
+password = device_info[device][2]
+ssh.connect(host_ip, username=username, password=password)
+
+# UNEEDED LINE?
+# channel = ssh.get_transport().open_session()
+# t.sleep(30)
 
 scope.WriteString("BUZZ BEEP", True)
 scope.WriteString("F3:TRA OFF", 1)
 scope.WriteString("CLSW", 1)
-
 scope.WriteString("F3:TRA ON", 1)
 scope.WriteString("BUZZ BEEP", True)
 
-sys.stdout.close()
-sys.stdout = orig_stdout
+# sys.stdout.close()
+# sys.stdout = orig_stdout
 
 print("\n\nNow running the SSD MobileNet V2 TensorFlow benchmark...\n")
 print("This will take approximately 18 minutes to complete.\n\n")
 
-# get file timestamp
-time = datetime.datetime.now()
-
 # start logging and running benchmarks
-sys.stdout = open(file, "w")
+sys.stdout = open(timestamp(), "w")
 
+# MobileNet V2 TensorFlow Benchmark
 ssd = []
 count = 0
 result = 0
 while count < 3:
     (stdin, stdout, stderr) = ssh.exec_command("cd /usr/src/tensorrt/bin && ./sample_uff_ssd_rect")
-
-
-    def line_buffered(f):
-        line_buf = ""
-        while not f.channel.exit_status_ready():
-            line_buf += str(f.read(1), 'utf-8')
-            if line_buf.endswith('\n'):
-                yield line_buf
-                line_buf = ''
-
 
     # reads times and writes them to list
     for l in line_buffered(stdout):
@@ -121,11 +125,11 @@ while count < 3:
             except:
                 continue
     count += 1
+
 # converts standard Python list into NumPy array
 ssd_analysis = np.array(ssd)
 
 # Data description - steps repeat for each benchmark
-
 print(stats.describe(ssd_analysis))
 
 sys.stdout.close()
@@ -146,29 +150,19 @@ file = "JetsonNano_ResNet50_" + str(time.year) + str(time.month) + str(time.day)
 scope.WriteString("BUZZ BEEP", True)
 
 print("\n\nNow running the ResNet-50 TensorFlow benchmark...\n")
-
 print("This will take approximately 12 minutes to complete. \n")
 
 sys.stdout = open(file, "w")
 
+# ResNet-50 TensorFlow Benchmark
 rn50 = []
 nums = []
 p = re.compile(r'\d+.\d{4}')
 count = 0
 result = 0
 while count < 3:
-    (stdin, stdout, stderr) = ssh.exec_command(
-        "cd /usr/src/tensorrt/bin && ./trtexec --output=prob --deploy=../data/googlenet/ResNet50_224x224.prototxt --fp16 --batch=1")
-
-
-    def line_buffered(f):
-        line_buf = ""
-        while not f.channel.exit_status_ready():
-            line_buf += str(f.read(1), 'utf-8')
-            if line_buf.endswith('\n'):
-                yield line_buf
-                line_buf = ''
-
+    (stdin, stdout, stderr) = ssh.exec_command("cd /usr/src/tensorrt/bin && ./trtexec --output=prob "
+                                               "--deploy=../data/googlenet/ResNet50_224x224.prototxt --fp16 --batch=1")
 
     for l in line_buffered(stdout):
         print(l)
@@ -209,25 +203,15 @@ print("This will take approximately 21 minutes to complete.\n")
 
 sys.stdout = open(file, "w")
 
+# Inception V4 PyTorh Benchmark
 inc4 = []
 numbers = []
 p = re.compile(r'\d+.\d{3}')
 count = 0
 result = 0
 while count < 3:
-    (stdin, stdout, stderr) = ssh.exec_command(
-        "cd /usr/src/tensorrt/bin && ./trtexec --output=prob --deploy=../data/googlenet/inception_v4.prototxt --fp16 --batch=1")
-
-
-    def line_buffered(f):
-        line_buf = ""
-        while not f.channel.exit_status_ready():
-            line_buf += str(f.read(1), 'utf-8')
-            if line_buf.endswith('\n'):
-                yield line_buf
-                line_buf = ''
-
-
+    (stdin, stdout, stderr) = ssh.exec_command("cd /usr/src/tensorrt/bin && ./trtexec --output=prob "
+                                               "--deploy=../data/googlenet/inception_v4.prototxt --fp16 --batch=1")
     for l in line_buffered(stdout):
         print(l)
         for i in l.split():
@@ -266,24 +250,14 @@ print("\n\nNow running the VGG-19 MXNet benchmark...\n")
 
 sys.stdout = open(file, "w")
 
+# VGG-19 MXNet
 vgg19 = []
 p = re.compile(r'\d+.\d{3}')
 result = 0
 count = 0
 while count < 3:
-    (stdin, stdout, stderr) = ssh.exec_command(
-        "cd /usr/src/tensorrt/bin && ./trtexec --output=prob --deploy=../data/googlenet/vgg19_N2.prototxt --fp16 --batch=1")
-
-
-    def line_buffered(f):
-        line_buf = ""
-        while not f.channel.exit_status_ready():
-            line_buf += str(f.read(1), 'utf-8')
-            if line_buf.endswith('\n'):
-                yield line_buf
-                line_buf = ''
-
-
+    (stdin, stdout, stderr) = ssh.exec_command("cd /usr/src/tensorrt/bin && ./trtexec --output=prob "
+                                               "--deploy=../data/googlenet/vgg19_N2.prototxt --fp16 --batch=1")
     for l in line_buffered(stdout):
         print(l)
         for i in l.split():
@@ -322,21 +296,11 @@ print("\n\nNow running the UNet Caffe benchmark...\n")
 
 sys.stdout = open(file, "w")
 
+# UNet Caffe
 count = 0
 while count < 3:
-    (stdin, stdout, stderr) = ssh.exec_command(
-        "cd /usr/src/tensorrt/bin && ./trtexec --uff=~/output_graph.uff --uffInput=input_1,1,512,512 --output=conv2d_19/Sigmoid --fp16")
-
-
-    def line_buffered(f):
-        line_buf = ""
-        while not f.channel.exit_status_ready():
-            line_buf += str(f.read(1), 'utf-8')
-            if line_buf.endswith('\n'):
-                yield line_buf
-                line_buf = ''
-
-
+    (stdin, stdout, stderr) = ssh.exec_command("cd /usr/src/tensorrt/bin && ./trtexec --uff=~/output_graph.uff "
+                                               "--uffInput=input_1,1,512,512 --output=conv2d_19/Sigmoid --fp16")
     for l in line_buffered(stdout):
         print(l)
     count += 1
@@ -357,25 +321,16 @@ print("\n\nNow running the OpenPose benchmark...\n")
 print("This will take approximately 12 minutes to complete.\n")
 
 sys.stdout = open(file, "w")
+
+# OpenPose
 op = []
 numeros = []
 p = re.compile(r'\d+.\d{3}')
 result = 0
 count = 0
 while count < 3:
-    (stdin, stdout, stderr) = ssh.exec_command(
-        "cd /usr/src/tensorrt/bin && ./trtexec --output=Mconv7_stage2_L2 --deploy=../data/googlenet/pose_estimation.prototxt --fp16 --batch=1")
-
-
-    def line_buffered(f):
-        line_buf = ""
-        while not f.channel.exit_status_ready():
-            line_buf += str(f.read(1), 'utf-8')
-            if line_buf.endswith('\n'):
-                yield line_buf
-                line_buf = ''
-
-
+    (stdin, stdout, stderr) = ssh.exec_command("cd /usr/src/tensorrt/bin && ./trtexec --output=Mconv7_stage2_L2 "
+                                               "--deploy=../data/googlenet/pose_estimation.prototxt --fp16 --batch=1")
     for l in line_buffered(stdout):
         print(l)
         for i in l.split():
@@ -413,25 +368,17 @@ print("\n\nNow running the Super Resolution benchmark...\n")
 print("This will take approximately 2 minutes to complete.\n")
 
 sys.stdout = open(file, "w")
+
+# Super Resolution
 sr = []
 numerals = []
 result = 0
 count = 0
 p = re.compile(r'\d+.\d{4}')
 while count < 3:
-    (stdin, stdout, stderr) = ssh.exec_command(
-        "cd /usr/src/tensorrt/bin && ./trtexec --output=output_0 --onnx=./Super-Resolution-BSD500/super_resolution_bsd500.onnx --fp16 --batch=1")
-
-
-    def line_buffered(f):
-        line_buf = ""
-        while not f.channel.exit_status_ready():
-            line_buf += str(f.read(1), 'utf-8')
-            if line_buf.endswith('\n'):
-                yield line_buf
-                line_buf = ''
-
-
+    (stdin, stdout, stderr) = ssh.exec_command("cd /usr/src/tensorrt/bin && ./trtexec --output=output_0 "
+                                               "--onnx=./Super-Resolution-BSD500/super_resolution_bsd500."
+                                               "onnx --fp16 --batch=1")
     for l in line_buffered(stdout):
         print(l)
         for i in l.split():
@@ -470,6 +417,7 @@ print("This will take approximately 2 minutes to complete.\n")
 
 sys.stdout = open(file, "w")
 
+# Tiny Yolo v3
 ty = []
 decimals = []
 p = re.compile(r'\d+.\d{4}')
@@ -478,17 +426,6 @@ result = 0
 while count < 3:
     (stdin, stdout, stderr) = ssh.exec_command(
         "cd ~/deepstream_reference_apps/yolo && trt-yolo-app --flagfile=config/yolov3-tiny.txt")
-
-
-    def line_buffered(f):
-        line_buf = ""
-        while not f.channel.exit_status_ready():
-            line_buf += str(f.read(1), 'utf-8')
-            if line_buf.endswith('\n'):
-                yield line_buf
-                line_buf = ''
-
-
     for l in line_buffered(stdout):
         print(l)
         for i in l.split():
@@ -525,13 +462,12 @@ scope.WriteString("BUZZ BEEP", True)
 scope.WriteString("F3:TRA OFF", 1)
 scope.WriteString("BUZZ BEEP", True)
 
-print("Saving oscilloscope data now, please wait...");
+print("Saving oscilloscope data now, please wait...")
 
 time = datetime.datetime.now()
 finalFile = "OscilloscopeOutput_" + str(time.year) + str(time.month) + str(time.day) + str(time.hour) + str(
     time.minute) + str(time.second) + ".txt"
 
-waveform = []
 waveform = scope.GetScaledWaveform("F3", 5000, 0)
 
 with open(finalFile, 'w') as txt_file:
@@ -542,7 +478,7 @@ scope.WriteString("BUZZ BEEP", True)
 
 print("\nYour output file has been saved to your current working directory. Closing oscilloscope connection.")
 
-### disconnect scope from network connection
+# Disconnect scope from network connection
 scope.Disconnect()
 
 print("\n\nExecution halted.")

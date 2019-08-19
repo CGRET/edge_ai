@@ -34,6 +34,7 @@ To-do's / Next steps for the future:
 scope_ip = "169.254.177.210"
 device = "Jetson Nano"
 
+
 # Info for the devices [IP Address, username, password]
 device_info = {"Jetson Nano": ["192.168.55.1", "ubuntu", "ubuntu"],
                "Coral Dev Board": ["192.168.55.20", "mendel", "mendel"]}
@@ -106,10 +107,35 @@ print("This will take approximately 18 minutes to complete.\n\n")
 # start logging and running benchmarks
 sys.stdout = open(timestamp(), "w")
 
+(stdin, stdout, stderr) = ssh.exec_command("cd /usr/src/tensorrt/bin && ./sample_uff_ssd_rect")
+# Grab the output from the test bench
+data = stdout.readlines()
+
+# Trims the data to the outputs we care about (i.e. inference run times)
+data = data[18:-1]
+
+times = []
+# Loop through the outputs and grab the times
+for count in range(0, len(data)-1):
+    # Takes the current element, splits it by spaces, then takes the second to last object and converts it to a float
+    times.append(float(data[count].split()[len(data[count].split()) - 2]))
+
+# Converts the times into meaningful statistics
+test_stats = stats.describe(np.array(times))
+
+print("SSD Mobilenet V2 Summary Statistics: ")
+print("Count: ", test_stats.nobs)
+print("Interval: ", test_stats.minmax)
+print("Mean: ", test_stats.mean)
+print("Variance: ", test_stats.variance)
+print("Skewness: ", test_stats.skewness)
+print("Kurtosis: ", test_stats.kurtosis)
+
 # MobileNet V2 TensorFlow Benchmark
 ssd = []
 count = 0
 result = 0
+
 while count < 3:
     (stdin, stdout, stderr) = ssh.exec_command("cd /usr/src/tensorrt/bin && ./sample_uff_ssd_rect")
 

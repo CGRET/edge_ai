@@ -17,12 +17,13 @@ files (sudo nano /etc/network/interface) and added the following:
     broadcast 192.168.55.255
     gateway 192.168.55.254`
     
-- I then restarted the device, and chaned teh ssh config file (sudo nano /etc/ssh/sshd_config) and changed
+- I then restarted the device, and changed the ssh config file (sudo nano /etc/ssh/sshd_config) and changed
 "Password Authentication" to "Yes" and "PubKeyAuthentication" to "No". This stops the OS from requiring a one time push
-of keys using mdt, which windows cannot do because of Driver Issues
+of keys using mdt, which windows cannot do because of driver issues
 
 ##Nano
 - Had to download an compile MobileNet benchmark.
     - Had one error where we had to use vim to remove the "static" description from the gLogger variable.
+- For the super resolution benchmark, makes sure the main folder resides withing the `/usr/src/tensortt/bin` folder.
     
     

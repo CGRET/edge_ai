@@ -16,9 +16,14 @@ benchmarks = {"SSD Mobilenet V2": "cd /usr/src/tensorrt/bin && ./sample_uff_ssd_
               "ResNet": "cd /usr/src/tensorrt/bin && "
                         "./trtexec --output=prob --deploy=../data/googlenet/ResNet50_224x224.prototxt --fp16 --batch=1",
               "VGG-19": "cd /usr/src/tensorrt/bin && "
-                        "./trtexec --output=prob --deploy=../data/googlenet/VGG19_N2 --fp16 --batch=1",
+                        "./trtexec --output=prob --deploy=../data/googlenet/vgg19_N2.prototxt --fp16 --batch=1",
               "Inception": "cd /usr/src/tensorrt/bin && "
-                           "./trtexec --output=prob --deploy=../data/googlenet/inception_v4.prototxt --fp16 --batch=1"}
+                           "./trtexec --output=prob --deploy=../data/googlenet/inception_v4.prototxt --fp16 --batch=1",
+              "OpenPose": "cd /usr/src/tensorrt/bin && "
+                          "./trtexec --output=Mconv7_stage2_L2 --deploy=../data/googlenet/pose_estimation.prototxt"
+                          " --fp16 --batch=1",
+              "Super Resolution": "cd /usr/src/tensorrt/bin && ./trtexec --output=output_0 "
+                                  "--onnx=./Super-Resolution-BSD500/super_resolution_bsd500.onnx --fp16 --batch=1"}
 
 # SSH Setup
 ssh = paramiko.SSHClient()
@@ -28,11 +33,11 @@ username = device_info[device][1]
 password = device_info[device][2]
 ssh.connect(host_ip, username=username, password=password)
 # (stdin, stdout, stderr) = ssh.exec_command("cd /usr/src/tensorrt/bin")    # Move into benchmark directory
-print("SSH Successful...")
+print("SSH Successful...\n")
 
-print("Starting Benchmarks...\n")
+print("Starting Benchmarks...")
 for benchmark, command in benchmarks.items():
-    print("Starting " + benchmark + " Benchmark:")
+    print("\n" + benchmark + " Benchmark\n")
     (stdin, stdout, stderr) = ssh.exec_command(command)     # Run the benchmark
     data = stdout.readlines()   # Grab the output from the test bench
     times = []
@@ -43,7 +48,7 @@ for benchmark, command in benchmarks.items():
             times.append(float(data[line].split()[len(data[line].split()) - 2]))
     else:
         for line in data:
-            if line.startswith("Average"):
+            if line.startswith("[I] Average"):
                 p = re.compile(r'\d+.\d{3}')
                 times.append(float(p.findall(line.split("(")[0])[0]))   # Grab the correct time and turn it to a float
 

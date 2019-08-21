@@ -25,5 +25,6 @@ of keys using mdt, which windows cannot do because of driver issues
 - Had to download an compile MobileNet benchmark.
     - Had one error where we had to use vim to remove the "static" description from the gLogger variable.
 - For the super resolution benchmark, makes sure the main folder resides withing the `/usr/src/tensortt/bin` folder.
+    - Same with the U-Net Segmentation Benchmark
     
     

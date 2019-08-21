@@ -23,7 +23,9 @@ benchmarks = {"SSD Mobilenet V2": "cd /usr/src/tensorrt/bin && ./sample_uff_ssd_
                           "./trtexec --output=Mconv7_stage2_L2 --deploy=../data/googlenet/pose_estimation.prototxt"
                           " --fp16 --batch=1",
               "Super Resolution": "cd /usr/src/tensorrt/bin && ./trtexec --output=output_0 "
-                                  "--onnx=./Super-Resolution-BSD500/super_resolution_bsd500.onnx --fp16 --batch=1"}
+                                  "--onnx=./Super-Resolution-BSD500/super_resolution_bsd500.onnx --fp16 --batch=1",
+              "U-Net Segmentation": "cd /usr/src/tensorrt/bin && ./trtexec --uff=./output_graph.uff "
+                                    "--uffInput=input_1,1,512,512 --output=conv2d_19/Sigmoid --fp16"}
 
 # SSH Setup
 ssh = paramiko.SSHClient()
@@ -32,7 +34,6 @@ host_ip = device_info[device][0]
 username = device_info[device][1]
 password = device_info[device][2]
 ssh.connect(host_ip, username=username, password=password)
-# (stdin, stdout, stderr) = ssh.exec_command("cd /usr/src/tensorrt/bin")    # Move into benchmark directory
 print("SSH Successful...\n")
 
 print("Starting Benchmarks...")
